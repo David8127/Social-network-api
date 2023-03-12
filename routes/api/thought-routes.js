@@ -39,11 +39,11 @@ router.put('/:thoughtId', (req, res) => {
     Thought.findByIdAndUpdate(req.params.thoughtId, {
         thoughtText: req.body.thoughtText,
         username: req.body.username,
-    }, (err, thought) => {
+    }, (err) => {
         if (err) {
             res.status(500).json(err)
         } else {
-            res.status(200).send( {message: "Successful Update!"} )
+            res.status(200).send({ message: "Successful Update!" })
         }
     })
 })
@@ -54,19 +54,31 @@ router.delete('/:thoughtId', (req, res) => {
         if (err) {
             res.status(500).json(err)
         } else {
-            res.status(200).send( {message: "Deleted successfully!"} )
+            res.status(200).send({ message: "Deleted successfully!" })
         }
     })
 });
 
 //TODO: ROUTE TO ADD REACTION TO A THOUGHT
 router.post('/:thoughtId/reactions', (req, res) => {
-    
-});
+    Thought.findOneAndUpdate(
+        { _id: req.params.thoughtId },
+        { $addToSet: { reactionBody: req.body.reactionBody, username: req.body.username } },
+        { runValidators: true, new: true }
+    )
+        .then((thought) =>
+            !thought
+                ? res
+                    .status(404)
+                    .json({ message: 'No thought found with that id' })
+                : res.json(thought)
+        )
+        .catch((err) => res.status(500).json(err));
+}),
 
-//TODO: ROUTE TO DELETE A REACTION ON A THOUGHT
-router.delete('/:thoughtId/reactions/:reactionId', (req, res) => {
+    //TODO: ROUTE TO DELETE A REACTION ON A THOUGHT
+    router.delete('/:thoughtId/reactions/:reactionId', (req, res) => {
 
-})
+    })
 
 module.exports = router;
