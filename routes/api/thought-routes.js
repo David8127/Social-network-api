@@ -1,6 +1,6 @@
 
 const router = require('express').Router();
-const { Thought, Reaction } = require('../../models')
+const { Thought, User, Reaction } = require('../../models')
 
 //TODO: ROUTE TO GET ALL THOUGHTS
 router.get('/', (req, res) => {
@@ -10,17 +10,21 @@ router.get('/', (req, res) => {
 })
 
 //TODO: ROUTE TO CREATE A NEW THOUGHT
-router.post('/', (req, res) => {
+router.post('/:userId', (req, res) => {
     Thought.create({
         thoughtText: req.body.thoughtText,
         username: req.body.username
-    }, (err, thought) => {
-        if (err) {
-            res.status(500).json(err)
-        } else {
-            res.status(200).json(true)
-        }
-    })
+    }).then((thought) => {
+        User.findOneAndUpdate(
+            { _id: req.params.userId },
+            { $push: { thoughts: thought._id } },
+            { runValidators: true, new: true }
+        ) .then((user) => {
+            res.status(200).json(user)
+        })
+    }).catch((err) => 
+        {res.status(500).json(err)
+        console.log(err)});
 });
 
 //TODO: ROUTE TO GET SINGLE THOUGHT BASED ON THOUGHT ID
@@ -48,13 +52,13 @@ router.put('/:thoughtId', (req, res) => {
     })
 })
 
-//TODO: ROUTE TO DELETE A THOUGHT BASED ON THOUGHT ID
+// TODO: ROUTE TO DELETE A THOUGHT BASED ON THOUGHT ID
 router.delete('/:thoughtId', (req, res) => {
     Thought.findByIdAndDelete(req.params.thoughtId, (err, thought) => {
         if (err) {
             res.status(500).json(err)
         } else {
-            res.status(200).send({ message: "Deleted successfully!" })
+            res.status(200).json('Deleted the thought!')
         }
     })
 });
@@ -63,22 +67,30 @@ router.delete('/:thoughtId', (req, res) => {
 router.post('/:thoughtId/reactions', (req, res) => {
     Thought.findOneAndUpdate(
         { _id: req.params.thoughtId },
-        { $addToSet: { reactionBody: req.body.reactionBody, username: req.body.username } },
+        { $addToSet: { reactions: req.body } },
         { runValidators: true, new: true }
     )
         .then((thought) =>
             !thought
-                ? res
-                    .status(404)
-                    .json({ message: 'No thought found with that id' })
+                ? res.status(404).json({ message: 'No thought found with this id!' })
                 : res.json(thought)
         )
         .catch((err) => res.status(500).json(err));
 }),
 
-    //TODO: ROUTE TO DELETE A REACTION ON A THOUGHT
+    // TODO: ROUTE TO DELETE A REACTION ON A THOUGHT
     router.delete('/:thoughtId/reactions/:reactionId', (req, res) => {
-
+        Thought.findOneAndUpdate(
+            { _id: req.params.thoughtId },
+            { $pull: { reactions: { reactionId: req.params.reactionId } } },
+            { runValidators: true, new: true }
+        )
+            .then((thought) =>
+                !thought
+                    ? res.status(404).json({ message: 'No thought found with this id!' })
+                    : res.json(thought)
+            )
+            .catch((err) => res.status(500).json(err));
     })
 
 module.exports = router;

@@ -18,31 +18,42 @@ router.post('/', (req, res) => {
         if (err) {
             res.status(500).json(err)
         } else {
-            res.status(200).json(true)
+            res.status(200).json(user)
         }
     })
 });
 
 //TODO - ROUTE THAT GETS A SINGLE USER BASED ON USER ID
 router.get('/:userId', (req, res) => {
-    User.findById(req.params.userId, (err, user) => {
-        if (err) {
-            res.status(500).json(err)
-        } else {
-            res.status(200).json(user)
-        }
-    })
+    User.findById(req.params.userId)
+        .populate('thoughts')
+        .then((user) =>
+            !user
+                ? res
+                    .status(404)
+                    .json({ message: 'No user found with that id' })
+                : res.json(user)
+        )
+        .catch((err) => res.status(500).json(err));
+        // .then((err, user) => {
+        //     if (err) {
+        //         res.status(500).json(err)
+        //     } else {
+        //         res.status(200).json(user)
+        //     }
+        // })
 })
 
 //TODO - ROUTE THAT UPDATES A SINGLE USER
 router.put('/:userId', (req, res) => {
     User.findByIdAndUpdate(req.params.userId, {
         username: req.body.username,
+        email: req.body.email,
     }, (err, user) => {
         if (err) {
             res.status(500).json(err)
         } else {
-            res.status(200).send({ message: "Successful Update!" })
+            res.status(200).json(user)
         }
     })
 })
@@ -62,14 +73,14 @@ router.delete('/:userId', (req, res) => {
 router.put('/:userId/friends/:friendId', (req, res) => {
     User.findOneAndUpdate(
         { _id: req.params.userId },
-        { $addToSet: { friends: req.body } },
+        { $addToSet: { friends: req.params.friendId } },
         { runValidators: true, new: true }
     )
         .then((user) =>
             !user
                 ? res
                     .status(404)
-                    .json({ message: 'No user found with that ID :(' })
+                    .json({ message: 'No user found with that id' })
                 : res.json(user)
         )
         .catch((err) => res.status(500).json(err));
@@ -77,7 +88,16 @@ router.put('/:userId/friends/:friendId', (req, res) => {
 
 //TODO - ROUTE THAT DELETES A FRIEND FROM A USER'S FRIENDS, DONT DELETE THE FRIEND AS A USER THOUGH!
 router.delete('/:userId/friends/:friendId', (req, res) => {
-
+    User.findOneAndUpdate(
+        { _id: req.params.userId },
+        { $pull: { friends: req.params.friendId } }
+      )
+        .then((user) =>
+          !user
+            ? res.status(404).json({ message: "No user found with that id" })
+            :res.status(200).json(user)
+        )
+        .catch((err) => res.status(500).json(err));
 });
 
 module.exports = router;
